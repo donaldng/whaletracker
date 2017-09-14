@@ -6,6 +6,8 @@ db = MongoClient().wtracker.trades
 
 def lookback(sec):
     t = int(time.time())-sec
+
+    print("")
     print("[ Whaletracker ]")
     print("")
     print("Tracking trades over past 24 hours.")
@@ -17,15 +19,17 @@ def lookback(sec):
     tps = round(cur.count()/60, 4)
     print("TPS: %s" % tps)
 
+    min_amount = 9.9
+
     top_buy = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : 0 } } },
+                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount } } },
                             { "$group": {"_id": "$amount", "count": { "$sum": 1 }}},
                             { "$sort": { "count": -1 } },
                             { "$limit": 5 }
                         ])
 
     top_sell = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : 0 } } },
+                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) } } },
                             { "$group": {"_id": "$amount", "count": { "$sum": 1 }}},
                             { "$sort": { "count": -1 } },
                             { "$limit": 5 }
@@ -41,12 +45,17 @@ def lookback(sec):
     total = 0    
     for x in top_buy:
         c+=1
-        print("%s. %s (%s)" % (c, x["_id"], x["count"]))
+        amount = x["_id"]
+        count = x["count"]        
         if global_price:
-            total += global_price * float(x["_id"]) * int(x["count"])
+            amount_sum = global_price * float(amount) * int(count)
+            total += amount_sum
+
+        print("%s. %s (%s)" % (c, amount, count))
+
 
     if global_price:
-        print("\nTotal: $%s" % abs(total))
+        print("\nTotal: $%s" % abs(round(total,2)))
 
     print("")
     print("=================")
@@ -58,12 +67,17 @@ def lookback(sec):
     total = 0
     for x in top_sell:
         c+=1
-        print("%s. %s (%s)" % (c, x["_id"], x["count"]))
+        amount = x["_id"]
+        count = x["count"]
         if global_price:
-            total += global_price * float(x["_id"]) * int(x["count"])
+            amount_sum = global_price * float(amount) * int(count)
+            total += amount_sum
+
+        print("%s. %s (%s)" % (c, amount, count))
+
 
     if global_price:
-        print("\nTotal: $%s" % abs(total))
+        print("\nTotal: $%s" % abs(round(total,2)))
 
 
 def spawn_tracker():
