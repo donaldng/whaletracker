@@ -12,10 +12,11 @@ def lookback(sec):
     print("")
     print("Tracking trades over past %s." % convert_to_time(sec))
     if global_price:
-        print("We are currently following %s coin, priced at $%s." % (coin, global_price))
+        currency = '$' if coin[:-3] == 'USD' else '฿'
+        print("We are currently following %s coin, priced at %s%s." % (coin, currency, global_price))
     print("")
 
-    cur = db.find( { 'ts' : { '$gt' : 60 } } )
+    cur = db.find( { 'ts' : { '$gt' : 60 }, 'pair': coin } )
     tps = round(cur.count()/60, 4)
     print("TPS: %s" % tps)
 
@@ -23,14 +24,14 @@ def lookback(sec):
     top = 10
 
     top_buy = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount } } },
+                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount }, 'pair': coin } },
                             { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},
                             { "$sort": { "count": -1 } },
                             { "$limit": top }
                         ])
 
     top_sell = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) } } },
+                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) }, 'pair': coin } },
                             { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},                            
                             { "$sort": { "count": -1 } },
                             { "$limit": top }
@@ -90,18 +91,20 @@ def spawn_tracker():
     if pid==0: # new process
         #print(x)
         ppid = os.getpid()
-        os.system("nohup python3 tracker.py %s >/dev/null 2>&1 &" % ppid)
+        os.system("nohup python3 tracker.py %s %s >/dev/null 2>&1 &" % (ppid, coin))
         exit()
 
 
 def get_market_price(coin):
-    if coin != "":
-        url = "https://api.coinmarketcap.com/v1/ticker/%s/" % coin
-        
+    if len(coin)==6:
+        fsym = coin[:3]
+        tsym = coin[-3:]
+        url = "https://min-api.cryptocompare.com/data/price?fsym=%s&tsyms=%s" % (fsym, tsym)
+
         try:
-            return float(requests.get(url).json()[0]["price_usd"])
+            return float(requests.get(url).json()[tsym])
         except:
-            print("Can't find %s from coinmarketcap!" % coin.lower())
+            print("Can't find %s from coinmarketcap!" % coin)
 
     return 0
 
@@ -123,24 +126,29 @@ def convert_to_time(seconds):
     return str
 
 
-def main(coin):
+def main():
 
     spawn_tracker()
 
     global global_price
     global_price = get_market_price(coin)
 
-    while True:
-        os.system("clear")
-        lookback(60*60)
-        print("\nprocessing... %s" % str(time.time())[-3:])
-        time.sleep(1)
+    if global_price:
+        while True:
+            os.system("clear")
+            lookback(60*60)
+            print("\nprocessing... %s" % str(time.time())[-3:])
+            time.sleep(1)
+    else:
+        print("Error: cannot find %s pair." % coin)
+        sys.exit()
 
 
 if __name__== "__main__":
-    coin = ""
-    if len(sys.argv) != 1:
-        coin = sys.argv[1]
+    global coin
+    if len(sys.argv) == 2:
+        coin = str(sys.argv[1])
+        main()
 
-    main(coin)
+    print("Error: 'crypto pair' parameter required! E.g. BTCUSD or ETHBTC")
 
