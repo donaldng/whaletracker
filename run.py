@@ -10,7 +10,7 @@ def lookback(sec):
     print("")
     print("[ Whaletracker ]")
     print("")
-    print("Tracking trades over past 24 hours.")
+    print("Tracking trades over past %s." % convert_to_time(sec))
     if global_price:
         print("We are currently following %s coin, priced at $%s." % (coin, global_price))
     print("")
@@ -19,20 +19,21 @@ def lookback(sec):
     tps = round(cur.count()/60, 4)
     print("TPS: %s" % tps)
 
-    min_amount = 9.9
+    min_amount = 99
+    top = 10
 
     top_buy = db.aggregate([
                             { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount } } },
-                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }}},
+                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},
                             { "$sort": { "count": -1 } },
-                            { "$limit": 5 }
+                            { "$limit": top }
                         ])
 
     top_sell = db.aggregate([
                             { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) } } },
-                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }}},
+                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},                            
                             { "$sort": { "count": -1 } },
-                            { "$limit": 5 }
+                            { "$limit": top }
                         ])
 
     print("")
@@ -46,12 +47,14 @@ def lookback(sec):
     for x in top_buy:
         c+=1
         amount = x["_id"]
-        count = x["count"]        
+        count = x["count"]     
+        avgPrice = round(float(x["avgPrice"]), 6)
+
         if global_price:
             amount_sum = global_price * float(amount) * int(count)
             total += amount_sum
 
-        print("%s. %s (%s)" % (c, amount, count))
+        print("%s. %s x %s (%s)" % (c, avgPrice, amount, count))
 
 
     if global_price:
@@ -69,11 +72,13 @@ def lookback(sec):
         c+=1
         amount = x["_id"]
         count = x["count"]
+        avgPrice = round(float(x["avgPrice"]), 6)  
+
         if global_price:
             amount_sum = global_price * float(amount) * int(count)
             total += amount_sum
 
-        print("%s. %s (%s)" % (c, amount, count))
+        print("%s. %s x %s (%s)" % (c, avgPrice, amount, count))
 
 
     if global_price:
@@ -100,6 +105,24 @@ def get_market_price(coin):
 
     return 0
 
+def convert_to_time(seconds):
+    d = 0
+
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    
+    str = "%s minutes" % m
+
+    if h:
+        str = "%s hours" % h
+
+    elif h >= 24:
+        d = divmod(h, 24)
+        str = "%s days" % d
+    
+    return str
+
+
 def main(coin):
 
     spawn_tracker()
@@ -109,7 +132,7 @@ def main(coin):
 
     while True:
         os.system("clear")
-        lookback(60*60*24)
+        lookback(60*60)
         print("\nprocessing... %s" % str(time.time())[-3:])
         time.sleep(1)
 

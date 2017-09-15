@@ -19,13 +19,10 @@ ws.send(sub)
 while True:
     x = json.loads(ws.recv())
 
-    if minute_passed(oldepoch):
-        oldepoch = time.time()
-
-        try:
-            os.kill(pid, 0)
-        except:  # Probably ENOSUCH
-            sys.exit()
+    try:
+        os.kill(pid, 0)
+    except:  # Probably ENOSUCH
+        sys.exit()
 
     if len(x) == 6:
         ts = x[3]
