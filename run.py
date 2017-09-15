@@ -25,13 +25,15 @@ def lookback(sec):
     top_buy = db.aggregate([
                             { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount }, 'pair': coin } },
                             { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},
+                            { "$match": { 'count': {'$gt': 1}  }},
                             { "$sort": { "count": -1 } },
                             { "$limit": top }
                         ])
 
     top_sell = db.aggregate([
                             { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) }, 'pair': coin } },
-                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},                            
+                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},   
+                            { "$match": { 'count': {'$gt': 1}  }},
                             { "$sort": { "count": -1 } },
                             { "$limit": top }
                         ])
@@ -131,7 +133,7 @@ def main():
     global coin
     global currency
 
-    coin = str(sys.argv[1])
+    coin = str(sys.argv[1]).upper()
 
     # Default lookback timeframe will be set to 1 hour.
     lookback_seconds = 3600
