@@ -90,7 +90,7 @@ def spawn_tracker():
     if pid==0: # new process
         #print(x)
         ppid = os.getpid()
-        os.system("nohup python3 tracker.py %s %s >/dev/null 2>&1 &" % (ppid, coin))
+        os.system("nohup python3 tracker.py %s %s >/dev/null 2>&1 &" % (coin, ppid))
         exit()
 
 
@@ -135,7 +135,7 @@ def main():
 
     # Default lookback timeframe will be set to 1 hour.
     lookback_seconds = 3600
-    
+
     if len(sys.argv) == 3:
         lookback_seconds = int(sys.argv[2])
 
@@ -145,7 +145,7 @@ def main():
 
         spawn_tracker()        
         
-        currency = '$' if coin[:-3] == 'USD' else '฿'        
+        currency = '$' if coin[-3:] == 'USD' else '฿'
         
         while True:
             os.system("clear")
