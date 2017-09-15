@@ -12,7 +12,6 @@ def lookback(sec):
     print("")
     print("Tracking trades over past %s." % convert_to_time(sec))
     if global_price:
-        currency = '$' if coin[:-3] == 'USD' else '฿'
         print("We are currently following %s coin, priced at %s%s." % (coin, currency, global_price))
     print("")
 
@@ -21,7 +20,7 @@ def lookback(sec):
     print("TPS: %s" % tps)
 
     min_amount = 99
-    top = 10
+    top = 5
 
     top_buy = db.aggregate([
                             { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount }, 'pair': coin } },
@@ -59,7 +58,7 @@ def lookback(sec):
 
 
     if global_price:
-        print("\nTotal: $%s" % abs(round(total,2)))
+        print("\nTotal: %s%s" % (currency, abs(round(total,2))))
 
     print("")
     print("=================")
@@ -83,7 +82,7 @@ def lookback(sec):
 
 
     if global_price:
-        print("\nTotal: $%s" % abs(round(total,2)))
+        print("\nTotal: %s%s" % (currency, abs(round(total,2))))
 
 
 def spawn_tracker():
@@ -128,15 +127,23 @@ def convert_to_time(seconds):
 
 def main():
 
-    spawn_tracker()
-
     global global_price
+    global coin
+    global currency
+
+    coin = str(sys.argv[1])
+
     global_price = get_market_price(coin)
 
     if global_price:
+
+        spawn_tracker()        
+        
+        currency = '$' if coin[:-3] == 'USD' else '฿'        
+        
         while True:
             os.system("clear")
-            lookback(60*60)
+            lookback(60*60*4)
             print("\nprocessing... %s" % str(time.time())[-3:])
             time.sleep(1)
     else:
@@ -145,9 +152,7 @@ def main():
 
 
 if __name__== "__main__":
-    global coin
-    if len(sys.argv) == 2:
-        coin = str(sys.argv[1])
+    if len(sys.argv) > 1:
         main()
 
     print("Error: 'crypto pair' parameter required! E.g. BTCUSD or ETHBTC")
