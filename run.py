@@ -133,6 +133,12 @@ def main():
 
     coin = str(sys.argv[1])
 
+    # Default lookback timeframe will be set to 1 hour.
+    lookback_seconds = 3600
+    
+    if len(sys.argv) == 3:
+        lookback_seconds = int(sys.argv[2])
+
     global_price = get_market_price(coin)
 
     if global_price:
@@ -143,7 +149,7 @@ def main():
         
         while True:
             os.system("clear")
-            lookback(60*60*4)
+            lookback(lookback_seconds)
             print("\nprocessing... %s" % str(time.time())[-3:])
             time.sleep(1)
     else:
