@@ -3,12 +3,7 @@ from pymongo import MongoClient
 from websocket import create_connection
 import time, json, os, sys
 
-def minute_passed(oldepoch):
-    return time.time() - oldepoch >= 60
-
-
 pid = int(sys.argv[1]) if len(sys.argv) != 1 else 0
-oldepoch = time.time()
 
 db = MongoClient().wtracker
 
@@ -21,7 +16,7 @@ while True:
 
     try:
         os.kill(pid, 0)
-    except:  # Probably ENOSUCH
+    except:
         sys.exit()
 
     if len(x) == 6:
