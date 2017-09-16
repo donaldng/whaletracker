@@ -20,71 +20,46 @@ def lookback(sec):
     print("TPS: %s" % tps)
 
     min_amount = 99
-    top = 5
+    limit = 5
 
-    top_buy = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$gt' : min_amount }, 'pair': coin } },
-                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},
-                            { "$match": { 'count': {'$gt': 1}  }},
-                            { "$sort": { "count": -1 } },
-                            { "$limit": top }
-                        ])
+    top = {}
 
-    top_sell = db.aggregate([
-                            { "$match": { 'ts' : { '$gt' : t }, 'amount': { '$lt' : (min_amount * -1) }, 'pair': coin } },
-                            { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},   
-                            { "$match": { 'count': {'$gt': 1}  }},
-                            { "$sort": { "count": -1 } },
-                            { "$limit": top }
-                        ])
+    for x in ["buy", "sell"]:
+        op = "$gt"
 
-    print("")
-    print("=================")
-    print("===  Top BUY  ===")
-    print("=================")
-    print("")
+        if x == "sell":
+            op = "$lt"
+            min_amount *= -1
 
-    c=0
-    total = 0    
-    for x in top_buy:
-        c+=1
-        amount = x["_id"]
-        count = x["count"]     
-        avgPrice = round(float(x["avgPrice"]), 6)
-
-        if global_price:
-            amount_sum = global_price * float(amount) * int(count)
-            total += amount_sum
-
-        print("%s. %s x %s (%s)" % (c, avgPrice, amount, count))
+        top_trades = db.aggregate([
+                                { "$match": { 'ts' : { '$gt' : t }, 'amount': { op : min_amount }, 'pair': coin } },
+                                { "$group": {"_id": "$amount", "count": { "$sum": 1 }, "avgPrice": { "$avg": "$price" } }},
+                                { "$match": { 'count': {'$gt': 1}  }},
+                                { "$sort": { "count": -1 } },
+                                { "$limit": limit }
+                            ])
 
 
-    if global_price:
-        print("\nTotal: %s%s" % (currency, abs(round(total,2))))
 
-    print("")
-    print("=================")
-    print("=== Top SELL  ===")
-    print("=================")
-    print("")
-    
-    c=0
-    total = 0
-    for x in top_sell:
-        c+=1
-        amount = x["_id"]
-        count = x["count"]
-        avgPrice = round(float(x["avgPrice"]), 6)  
+        print("")
+        print("===========================")
+        print("===\tTop %s  \t===" % x.upper())
+        print("===========================")
+        print("")
 
-        if global_price:
-            amount_sum = global_price * float(amount) * int(count)
-            total += amount_sum
+        c=0
+        total = 0    
+        for x in top_trades:
+            c+=1
+            amount = x["_id"]
+            count = x["count"]     
+            avgPrice = round(float(x["avgPrice"]), 6)
 
-        print("%s. %s x %s (%s)" % (c, avgPrice, amount, count))
+            if global_price:
+                amount_sum = global_price * float(amount) * int(count)
+                total += amount_sum
 
-
-    if global_price:
-        print("\nTotal: %s%s" % (currency, abs(round(total,2))))
+            print("%s. %s x %s (%s)" % (c, avgPrice, amount, count))
 
 
 def spawn_tracker():
